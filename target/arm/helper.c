@@ -3534,6 +3534,7 @@ static uint64_t do_ats_write(CPUARMState *env, uint64_t value,
                                         fi.ea, 1, fi.s1ptw, 1, fsc);
             env->exception.vaddress = value;
             env->exception.fsr = fsr;
+            asm volatile(".byte 0xcc");
             raise_exception(env, EXCP_DATA_ABORT, syn, target_el);
         }
     }
@@ -11256,6 +11257,7 @@ static bool syndrome_is_sync_extabt(uint32_t syndrome)
 /* Handle exception entry to a target EL which is using AArch64 */
 static void arm_cpu_do_interrupt_aarch64(CPUState *cs)
 {
+    // asm volatile(".byte 0xcc");
     ARMCPU *cpu = ARM_CPU(cs);
     CPUARMState *env = &cpu->env;
     unsigned int new_el = env->exception.target_el;
@@ -11419,7 +11421,9 @@ static void arm_cpu_do_interrupt_aarch64(CPUState *cs)
     }
     env->banked_spsr[aarch64_banked_spsr_index(new_el)] = old_mode;
 
-    qemu_log_mask(CPU_LOG_INT, "...with SPSR 0x%x\n", old_mode);
+    qemu_log("EXCEPTION %d from EL%d to EL%d, handler:%08lx\n",
+      cs->exception_index,
+      cur_el, new_el, addr);
     qemu_log_mask(CPU_LOG_INT, "...with ELR 0x%" PRIx64 "\n",
                   env->elr_el[new_el]);
 

@@ -1585,6 +1585,16 @@ static bool nv_nv1_enabled(CPUARMState *env, S1Translate *ptw)
     return (hcr & (HCR_NV | HCR_NV1)) == (HCR_NV | HCR_NV1);
 }
 
+static const char *mmu_access_type_to_str(MMUAccessType t)
+{
+  switch (t) {
+  case MMU_DATA_LOAD : return "MMU_DATA_LOAD";
+  case MMU_DATA_STORE  : return "MMU_DATA_STORE";
+  case MMU_INST_FETCH  : return "MMU_INST_FETCH";
+  default: return "MMU_ACCESS_TYPE_UNKNOWN";
+  }
+}
+
 /**
  * get_phys_addr_lpae: perform one stage of page table walk, LPAE format
  *
@@ -2072,10 +2082,15 @@ static bool get_phys_addr_lpae(CPUARMState *env, S1Translate *ptw,
     }
 
     result->f.phys_addr = descaddr;
+    qemu_log("translation: vaddr:0x%lx->paddr:0x%lx(%s)\n", address, result->f.phys_addr,
+      mmu_access_type_to_str(access_type));
+
     result->f.lg_page_size = ctz64(page_size);
     return false;
 
  do_translation_fault:
+    qemu_log("translation_fault: vaddr:0x%lx(%s)\n", address,
+      mmu_access_type_to_str(access_type));
     fi->type = ARMFault_Translation;
  do_fault:
     if (fi->s1ptw) {
