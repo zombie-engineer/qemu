@@ -73,8 +73,8 @@ static void bcm2835_systmr_write(void *opaque, hwaddr offset,
     BCM2835SystemTimerState *s = BCM2835_SYSTIMER(opaque);
     int index;
     uint32_t value = value64;
-    uint32_t triggers_delay_us;
     uint64_t now;
+    uint64_t next_time;
 
     trace_bcm2835_systmr_write(offset, value);
     switch (offset) {
@@ -91,10 +91,12 @@ static void bcm2835_systmr_write(void *opaque, hwaddr offset,
         index = (offset - A_COMPARE0) >> 2;
         s->reg.compare[index] = value;
         now = qemu_clock_get_us(QEMU_CLOCK_VIRTUAL);
-        /* Compare lower 32-bits of the free-running counter. */
-        triggers_delay_us = value - now;
-        trace_bcm2835_systmr_run(index, triggers_delay_us);
-        timer_mod(&s->tmr[index].timer, now + triggers_delay_us);
+        next_time = (now & 0xffffffff00000000) + value;
+        if (next_time < now)
+          next_time = now;
+
+        timer_mod(&s->tmr[index].timer, next_time);
+        trace_bcm2835_systmr_run(index, next_time);
         break;
     case A_COUNTER_LOW:
     case A_COUNTER_HIGH:
